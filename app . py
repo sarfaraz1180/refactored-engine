@@ -1,0 +1,55 @@
+import os
+from flask import Flask, request, jsonify, render_template_string
+from openai import OpenAI
+
+app = Flask(__name__)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>QuickBot Pro - AI Assistant</title>
+<style>
+body{font-family:Arial;background:#0f172a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+.box{background:#1e293b;padding:30px;border-radius:15px;width:400px;box-shadow:0 0 20px #38bdf8}
+input,button{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none}
+button{background:#38bdf8;color:#0f172a;font-weight:bold;cursor:pointer}
+#reply{margin-top:15px;padding:12px;background:#334155;border-radius:8px;min-height:50px}
+</style>
+</head>
+<body>
+<div class="box">
+<h2>🤖 QuickBot Pro</h2>
+<input id="msg" placeholder="Apna sawal likho...">
+<button onclick="send()">Send</button>
+<div id="reply">Main sun raha hun Ustaad...</div>
+</div>
+<script>
+async function send(){
+let m=document.getElementById('msg').value;
+document.getElementById('reply').innerText='Soch raha hun...';
+let r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:m})});
+let d=await r.json();
+document.getElementById('reply').innerText=d.reply;
+}
+</script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def home():
+    return render_template_string(HTML)
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_msg = request.json['msg']
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role":"user","content":user_msg}]
+    )
+    return jsonify({"reply": response.choices[0].message.content})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
